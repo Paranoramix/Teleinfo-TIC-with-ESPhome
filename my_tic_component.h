@@ -25,7 +25,13 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 	Sensor *sensor_BASE = new Sensor();
 	TextSensor *sensor_ADCO = new TextSensor();
 
-	bool enable = true;
+	bool enable = false;
+
+	bool adco_updated = false;
+	bool iinst_updated = false;
+	bool isousc_updated = false;
+	bool papp_updated = false;
+	bool base_updated = false;
 	
 	float iinst = 0.0;
 	float isousc = 0.0;
@@ -59,11 +65,33 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 	 * Period between two call: time_interval.
 	 */
 	void update() override {
-		sensor_ADCO->publish_state(adco.c_str());
-		sensor_BASE->publish_state(base / 1000.0);
-		sensor_ISOUSC->publish_state(isousc);
-		sensor_IINST->publish_state(iinst);
-		sensor_PAPP->publish_state(papp);
+		if (enable) {
+			if (adco_updated) {
+				ESP_LOGI("Update", "ADCO update: %s", adco.c_str());
+				sensor_ADCO->publish_state(adco.c_str());
+				adco_updated = false;
+			}
+			if (base_updated) {
+				ESP_LOGI("Update", "BASE update: %.0f", (base / 1000.0));
+				sensor_BASE->publish_state(base / 1000.0);
+				base_updated = false;
+			}
+			if (isousc_updated) {
+				ESP_LOGI("Update", "ISOUSC update: %.0f", isousc);
+				sensor_ISOUSC->publish_state(isousc);
+				isousc_updated = false;
+			}
+			if (iinst_updated) {
+				ESP_LOGI("Update", "IINST update: %.0f", iinst);
+				sensor_IINST->publish_state(iinst);
+				iinst_updated = false;
+			}
+			if (papp_updated) {
+				ESP_LOGI("Update", "PAPP update: %.0f", papp);
+				sensor_PAPP->publish_state(papp);
+				papp_updated = false;
+			}
+		}
 	}
 	
 	/**
@@ -100,12 +128,14 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 				processString(buff);
 				buff = "";
 			}
-		
+
 			// a little delay. I tried with yield() but program hangs.
 			delay(100);
-		}
 		
-		yield(); // Preserve time.		
+		}
+
+
+		yield(); // Preserve time for other processes.
 	}
 	
 	/**
@@ -126,18 +156,22 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 				value = value.substring(0, value.indexOf(separator));
 
 				// Checksum verification
-				// @TODO
 				char checksum = 0;
-				for (int i = 0 ; i < str.length(); i++) {
+
+				for (int i = 0 ; i < str.length() - 2; i++) {
 					checksum = checksum + str[i];
 				}
+				
+				// According to Enedis's documentation, checksum is the sum of each characters before last separator.
+				// When you computed the sum, you have to keep the 6 low bits and add 0x20.
+				checksum = (checksum & 0x3F) + 0x20;	
 
-				checksum = (checksum & 0x3F) + 0x20;
-
-				ESP_LOGD("tic", "checksum %s", checksum);
-
-				// Todo: implement checksum verification!
-				processCommand(label, value);
+				// Data is worked only if checksum is correct
+				if (str[str.length() - 1] == checksum) {
+					processCommand(label, value);
+				} else {
+					ESP_LOGW("Checksum", "Checksum error: %s - checksum: %02X - computed: %02X", str.c_str(), str[str.length() - 1], checksum);
+				}
 			}
 		}
 	}
@@ -152,31 +186,48 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 		if (label == "ADCO") {// adresse
 			if (adco != value) {
 				adco = value;
+				adco_updated = true;
 			}
+			
+			return;
 		}
 		
-		if (label == "BASE") {
+		if (label == "BASE") { // Current index
 			if (base != value.toFloat()) {	
 				base = value.toFloat();
+				base_updated = true;
 			}
+			
+			return;
 		}
 		
-		if (label == "ISOUSC") {
+		if (label == "ISOUSC") { // 
 			if (isousc != value.toFloat()) {	
 				isousc = value.toFloat();
+				isousc_updated = true;
 			}
+			
+			return;
 		}
 		
 		if (label == "IINST") {
 			if (iinst != value.toFloat()) {
 				iinst = value.toFloat();
+				iinst_updated = true;
 			}
+			
+			return;
 		}
 		
 		if (label == "PAPP") {
 			if (papp != value.toFloat()) {
 				papp = value.toFloat();
+				papp_updated = true;
 			}
+			
+			return;
 		}
+		
+		ESP_LOGI("tic", "data ignored: %s %s", label.c_str(), value.c_str());
 	}
 };
