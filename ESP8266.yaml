@@ -26,13 +26,18 @@ logger:
 
 # Enable Home Assistant API (set a password here for more security)
 api:
-  password: ''
 
 # Enable OTA (set a password here for more security)
 ota:
-  password: ''
 
 
+status_led:
+  pin:
+    number: GPIO2
+    
+web_server:
+  port: 80
+  
 # ajout du composant uart pour la communication série avec la sortie TIC du compteur
 # GPIO13 = Pin D7 sur Wemos D1
 uart:
@@ -44,11 +49,10 @@ uart:
   data_bits: 7
   stop_bits: 1
 
-
 # alias pour accéder l'instance du composant
 substitutions:
   name: "TIC"
-  init: 'MyTicComponent::instance(id(uart0), 15000);'
+  init: 'MyTicComponent::instance(id(uart0), 10000);'
 
 
 # déclaration du composant custom
@@ -58,8 +62,6 @@ custom_component:
       auto my_tic = ${init}
       App.register_component(my_tic);
       return {my_tic};
-
-
 # déclaration des sensors numérique
 # les sensors doivent être déclarés dans l'ordre de la fonction lambda
 sensor:
@@ -80,7 +82,8 @@ sensor:
   - platform: custom
     lambda: |-
       auto my_tic = ${init}
-      return {my_tic->sensor_IINST, my_tic->sensor_ISOUSC, my_tic->sensor_PAPP, my_tic->sensor_BASE};
+      return {my_tic->sensor_IINST, my_tic->sensor_ISOUSC, my_tic->sensor_PAPP, my_tic->sensor_BASE, my_tic->sensor_HCHC, my_tic->sensor_HCHP, my_tic->sensor_EJPHN, my_tic->sensor_EJPHPM, my_tic->sensor_IMAX};
+    
     sensors:
       - name: "EDF-Intensite"
         unit_of_measurement: A
@@ -94,10 +97,30 @@ sensor:
         unit_of_measurement: W
         accuracy_decimals: 0
         icon: mdi:power-plug
-      - name: "EDF-Index"
+      - name: "EDF-Index Option Base"
         unit_of_measurement: kWh
         accuracy_decimals: 0
         icon: mdi:home-analytics
+      - name: "EDF-Index Heures Creuses"
+        unit_of_measurement: kWh
+        accuracy_decimals: 0
+        icon: mdi:home-analytics
+      - name: "EDF-Index Heures Pleines"
+        unit_of_measurement: kWh
+        accuracy_decimals: 0
+        icon: mdi:home-analytics
+      - name: "EDF-Index EJP Heures Normales"
+        unit_of_measurement: kWh
+        accuracy_decimals: 0
+        icon: mdi:home-analytics
+      - name: "EDF-Index EJP Heures de Pointe Mobile"
+        unit_of_measurement: kWh
+        accuracy_decimals: 0
+        icon: mdi:home-analytics
+      - name: "EDF-Intensité appelée maximale"
+        unit_of_measurement: A
+        accuracy_decimals: 0
+        icon: mdi:power-plug
 
 
 # déclaration du sensor texte, c'est juste l'identifiant du compteur
@@ -105,9 +128,12 @@ text_sensor:
   - platform: custom
     lambda: |-
       auto my_tic = ${init}
-      return {my_tic->sensor_ADCO};
+      return {my_tic->sensor_ADCO, my_tic->sensor_OPTARIF, my_tic->sensor_PTEC, my_tic->sensor_HHPHC};
     text_sensors:
-      name: "ADCO"
+      - name: "ADCO"
+      - name: "OPTARIF"
+      - name: "PTEC"
+      - name: "HHPHC"
 
 binary_sensor:
   - platform: status
