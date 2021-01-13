@@ -23,22 +23,46 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 	Sensor *sensor_ISOUSC = new Sensor();
 	Sensor *sensor_PAPP = new Sensor();
 	Sensor *sensor_BASE = new Sensor();
+	Sensor *sensor_HCHC = new Sensor();
+	Sensor *sensor_HCHP = new Sensor();
+	Sensor *sensor_EJPHN = new Sensor();
+	Sensor *sensor_EJPHPM = new Sensor();
+	Sensor *sensor_IMAX = new Sensor();
 	TextSensor *sensor_ADCO = new TextSensor();
+	TextSensor *sensor_OPTARIF = new TextSensor();
+	TextSensor *sensor_PTEC = new TextSensor();
+	TextSensor *sensor_HHPHC = new TextSensor();
 
 	bool enable = false;
 
 	bool adco_updated = false;
+	bool optarif_updated = false;
 	bool iinst_updated = false;
 	bool isousc_updated = false;
 	bool papp_updated = false;
 	bool base_updated = false;
+	bool hchc_updated  = false;
+	bool hchp_updated  = false;
+	bool ejphn_updated  = false;
+	bool ejphpm_updated  = false;
+	bool ptec_updated  = false;
+	bool imax_updated  = false;
+	bool hhphc_updated   = false;
 	
 	float iinst = 0.0;
 	float isousc = 0.0;
 	float papp = 0.0;
 	float base = 0.0;
+	float hchc = 0.0;
+	float hchp = 0.0;
+	float ejphn = 0.0;
+	float ejphpm = 0.0;
+	float imax = 0.0;
 	
 	String adco = "";
+	String optarif = "";
+	String ptec = "";
+	String hhphc = "";
 	
   	/**
 	 * Returns an instance of MyTicComponent.
@@ -76,6 +100,31 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 				sensor_BASE->publish_state(base / 1000.0);
 				base_updated = false;
 			}
+			if (hchc_updated) {
+				ESP_LOGI("Update", "HCHC update: %.0f", (hchc / 1000.0));
+				sensor_HCHC->publish_state(hchc / 1000.0);
+				hchc_updated = false;
+			}
+			if (hchp_updated) {
+				ESP_LOGI("Update", "HCHP update: %.0f", (hchp / 1000.0));
+				sensor_HCHP->publish_state(hchp / 1000.0);
+				hchp_updated = false;
+			}
+			if (ejphn_updated) {
+				ESP_LOGI("Update", "EJPHN update: %.0f", (ejphn / 1000.0));
+				sensor_EJPHN->publish_state(ejphn / 1000.0);
+				ejphn_updated = false;
+			}
+			if (ejphpm_updated) {
+				ESP_LOGI("Update", "EJPHPM update: %.0f", (ejphpm / 1000.0));
+				sensor_EJPHPM->publish_state(ejphpm / 1000.0);
+				ejphpm_updated = false;
+			}
+			if (imax_updated) {
+				ESP_LOGI("Update", "IMAX update: %.0f", imax);
+				sensor_IMAX->publish_state(imax);
+				imax_updated = false;
+			}
 			if (isousc_updated) {
 				ESP_LOGI("Update", "ISOUSC update: %.0f", isousc);
 				sensor_ISOUSC->publish_state(isousc);
@@ -90,6 +139,21 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 				ESP_LOGI("Update", "PAPP update: %.0f", papp);
 				sensor_PAPP->publish_state(papp);
 				papp_updated = false;
+			}
+			if (optarif_updated) {
+				ESP_LOGI("Update", "OPTARIF update: %s", optarif.c_str());
+				sensor_OPTARIF->publish_state(optarif.c_str());
+				optarif_updated = false;
+			}
+			if (ptec_updated) {
+				ESP_LOGI("Update", "PTEC update: %s", ptec.c_str());
+				sensor_PTEC->publish_state(ptec.c_str());
+				ptec_updated = false;
+			}
+			if (hhphc_updated) {
+				ESP_LOGI("Update", "HHPHC update: %s", hhphc.c_str());
+				sensor_HHPHC->publish_state(hhphc.c_str());
+				hhphc_updated = false;
 			}
 		}
 	}
@@ -183,7 +247,7 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 		ESP_LOGD("tic", "tic_label %s", label.c_str());
 		ESP_LOGD("tic", "tic_value %s", value.c_str());	  
 
-		if (label == "ADCO") {// adresse
+		if (label == "ADCO") { // Adresse du compteur
 			if (adco != value) {
 				adco = value;
 				adco_updated = true;
@@ -192,7 +256,7 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 			return;
 		}
 		
-		if (label == "BASE") { // Current index
+		if (label == "BASE") { // Index option Base
 			if (base != value.toFloat()) {	
 				base = value.toFloat();
 				base_updated = true;
@@ -201,7 +265,7 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 			return;
 		}
 		
-		if (label == "ISOUSC") { // 
+		if (label == "ISOUSC") { // Intensité souscrite
 			if (isousc != value.toFloat()) {	
 				isousc = value.toFloat();
 				isousc_updated = true;
@@ -210,7 +274,7 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 			return;
 		}
 		
-		if (label == "IINST") {
+		if (label == "IINST") { // Intensité Instantanée
 			if (iinst != value.toFloat()) {
 				iinst = value.toFloat();
 				iinst_updated = true;
@@ -219,10 +283,82 @@ class MyTicComponent : public PollingComponent, public UARTDevice, public Switch
 			return;
 		}
 		
-		if (label == "PAPP") {
+		if (label == "PAPP") { // Puissance apparente
 			if (papp != value.toFloat()) {
 				papp = value.toFloat();
 				papp_updated = true;
+			}
+			
+			return;
+		}
+
+		if (label == "OPTARIF") {// Option tarifaire choisie
+			if (optarif != value) {
+				optarif = value;
+				optarif_updated = true;
+			}
+			
+			return;
+		}
+		
+		if (label == "HCHC") { // Index heures creuses
+			if (hchc != value.toFloat()) {	
+				hchc = value.toFloat();
+				hchc_updated = true;
+			}
+			
+			return;
+		}
+		
+		if (label == "HCHP") { // Index heures pleines
+			if (hchp != value.toFloat()) {	
+				hchp = value.toFloat();
+				hchp_updated = true;
+			}
+			
+			return;
+		}
+		
+		if (label == "EJPHN") { // Index EJP Heures Normales
+			if (ejphn != value.toFloat()) {	
+				ejphn = value.toFloat();
+				ejphn_updated = true;
+			}
+			
+			return;
+		}
+		
+		if (label == "EJPHPM") { // Index EJP Heures de Pointe Mobile
+			if (ejphpm != value.toFloat()) {	
+				ejphpm = value.toFloat();
+				ejphpm_updated = true;
+			}
+			
+			return;
+		}
+
+		if (label == "PTEC") {// Période tarifaire en cours
+			if (ptec != value) {
+				ptec = value;
+				ptec_updated = true;
+			}
+			
+			return;
+		}
+
+		if (label == "IMAX") {// Intensité appelée maximale
+			if (imax != value.toFloat()) {
+				imax = value.toFloat();
+				imax_updated = true;
+			}
+			
+			return;
+		}
+
+		if (label == "HHPHC") {// Horaire Heures Pleines Heures Creuses
+			if (hhphc != value) {
+				hhphc = value;
+				hhphc_updated = true;
 			}
 			
 			return;
