@@ -48,7 +48,7 @@ uart:
 # alias pour accéder l'instance du composant
 substitutions:
   name: "TIC"
-  init: 'MyTicComponent::instance(id(uart0));'
+  init: 'MyTicComponent::instance(id(uart0), 15000);'
 
 
 # déclaration du composant custom
